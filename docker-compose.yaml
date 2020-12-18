@@ -1,0 +1,76 @@
+version: "3"
+services:
+  master:
+    hostname: master
+    container_name: localmaster
+    image: mongo:4.0-xenial
+    expose:
+    - 27017
+    ports:
+      - 27011:27017
+    restart: always
+    volumes:
+      - ./data/master:/data/db
+    entrypoint: [ "/usr/bin/mongod", "--dbpath", "/data/db", "--bind_ip_all", "--replSet", "rs0" ]
+  secondary1:
+    hostname: secondary1
+    container_name: localsecondary1
+    image: mongo:4.0-xenial
+    expose:
+    - 27017
+    ports:
+    - 27012:27017
+    restart: always
+    volumes:
+      - ./data/secondary1:/data/db
+    entrypoint: [ "/usr/bin/mongod", "--dbpath", "/data/db", "--bind_ip_all", "--replSet", "rs0" ]
+  secondary2:
+    hostname: secondary2
+    container_name: localsecondary2
+    image: mongo:4.0-xenial
+    expose:
+    - 27017
+    ports:
+    - 27013:27017
+    restart: always
+    volumes:
+      - ./data/secondary2:/data/db
+    entrypoint: [ "/usr/bin/mongod", "--dbpath", "/data/db",  "--bind_ip_all", "--replSet", "rs0" ]
+  secondary3:
+    hostname: secondary3
+    container_name: localsecondary3
+    image: mongo:4.0-xenial
+    expose:
+    - 27017
+    ports:
+    - 27014:27017
+    restart: always
+    volumes:
+      - ./data/secondary3:/data/db
+    entrypoint: [ "/usr/bin/mongod", "--dbpath", "/data/db", "--bind_ip_all", "--replSet", "rs0" ]      
+  arbiter:
+    hostname: arbiter
+    container_name: localarbiter
+    image: mongo:4.0-xenial
+    expose:
+    - 27017
+    ports:
+    - 27015:27017
+    restart: always
+    volumes:
+      - ./data/arbiter:/data/db
+    entrypoint: [ "/usr/bin/mongod", "--bind_ip_all", "--smallfiles", "--replSet", "rs0" ]
+  mongo-init:
+    image: mongo:4.0-xenial
+    depends_on: 
+      - master
+      - secondary1
+      - secondary2
+      - secondary3
+      - arbiter
+    restart: on-failure:10
+    command: 
+      - mongo
+      - mongodb://:@master:27017/admin
+      - --eval
+      - 'rs.initiate({_id : "rs0",members: [{ _id : 0, host : "master:27017" },{ _id : 1, host : "secondary1:27017" },{ _id : 2, host : "secondary2:27017" },{ _id : 3, host : "secondary3:27017" },{ _id : 4, host : "arbiter:27017", arbiterOnly : true }]})'  
